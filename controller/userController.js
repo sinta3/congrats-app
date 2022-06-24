@@ -1,4 +1,5 @@
 const moment = require('moment-timezone')
+const axios = require('axios')
 const User = require('../models/userModels')
 const ConfigText = require('../models/configTextModel')
 
@@ -76,15 +77,13 @@ async function updateUser(req, res) {
 }
 
 async function resendAllMessage(req, res) {
-    console.log('test')
     try {
         const date = req.params.date
         const userData = await User.find({
             isSent: false,
             date: date
         })
-        console.log(userData)
-        let result = []
+        let resultData = []
         for (let el of userData) {
             const https = require('https')
             const config = await ConfigText.findOne({ type_data: el.congrats_type })
@@ -102,24 +101,23 @@ async function resendAllMessage(req, res) {
                     'Content-Length': data.length
                 }
             }
-            let code
-            const req = https.request(options, (res) => {
-                if (res.statusCode === 200) {
-                    code = res.statusCode
-                }
-                console.log(`status: ${res.statusCode}`)
-            })
+            let result = await axios.post(
+                'https://hookb.in/2q0pkkLLKmhdLKbdGqoR',
+                {
+                    'Content-Type': 'application/json'
+                },
+                data
+            )
 
-            req.write(data)
-            req.end()
-            if (code === 200) {
+            if (result.status === 200) {
                 el.isSent = true
-                result.push(el)
+                console.log(el)
                 await el.save()
+                resultData.push(el)
             }
-            console.log(el)
+            console.log(`status: ${res.status}`)
         }
-        res.status(200).json({ result, msg: 'success' })
+        res.status(200).json({ resultData, msg: 'success' })
     } catch (error) {
         console.log(error)
     }
@@ -129,38 +127,25 @@ async function sendToUser() {
     try {
         const userData = await User.find({ isSent: false, time_send: moment().format('YYYY-MM-DD HH:mm') })
         for (let el of userData) {
-            const https = require('https')
             const config = await ConfigText.findOne({ type_data: el.congrats_type })
             const data = JSON.stringify({
                 text: `${config.start_sentence}${el.first_name} ${el.last_name} ${config.end_sentence}`
             })
 
-            const options = {
-                hostname: 'hookb.in',
-                port: 443,
-                path: '/2q0pkkLLKmhdLKbdGqoR',
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': data.length
-                }
-            }
-            let code
-            const req = https.request(options, (res) => {
-                if (res.statusCode === 200) {
-                    code = res.statusCode
-                }
-                console.log(`status: ${res.statusCode}`)
-            })
+            let result = await axios.post(
+                'https://hookb.in/2q0pkkLLKmhdLKbdGqoR',
+                {
+                    'Content-Type': 'application/json'
+                },
+                data
+            )
 
-            req.write(data)
-            req.end()
-            if (code === 200) {
+            if (result.status === 200) {
                 el.isSent = true
-                result.push(el)
+                console.log(el)
                 await el.save()
             }
-            console.log(el)
+            console.log(`status: ${result.status}`)
         }
     } catch (error) {
         console.log(error)
