@@ -123,6 +123,51 @@ async function resendAllMessage(req, res) {
     }
 }
 
+async function resendAllMessageEndDay(req, res) {
+    try {
+        const userData = await User.find({
+            isSent: false,
+            date: moment().format('YYYY-MM-DD')
+        })
+        let resultData = []
+        for (let el of userData) {
+            const https = require('https')
+            const config = await ConfigText.findOne({ type_data: el.congrats_type })
+            const data = JSON.stringify({
+                text: `${config.start_sentence}${el.first_name} ${el.last_name} ${config.end_sentence}`
+            })
+
+            const options = {
+                hostname: 'hookb.in',
+                port: 443,
+                path: '/2q0pkkLLKmhdLKbdGqoR',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': data.length
+                }
+            }
+            let result = await axios.post(
+                'https://hookb.in/2q0pkkLLKmhdLKbdGqoR',
+                {
+                    'Content-Type': 'application/json'
+                },
+                data
+            )
+
+            if (result.status === 200) {
+                el.isSent = true
+                console.log(el)
+                await el.save()
+                resultData.push(el)
+            }
+            console.log(`status: ${res.status}`)
+        }
+    } catch (error) {
+        console.log(error)
+    }
+}
+
 async function sendToUser() {
     try {
         const userData = await User.find({ isSent: false, time_send: moment().format('YYYY-MM-DD HH:mm') })
@@ -157,5 +202,6 @@ module.exports = {
     deleteUser,
     updateUser,
     sendToUser,
-    resendAllMessage
+    resendAllMessage,
+    resendAllMessageEndDay
 }
